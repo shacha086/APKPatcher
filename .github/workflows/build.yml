@@ -7,10 +7,10 @@ on:
     branches: [ main ]
   repository_dispatch:
 
-
 env:
   APK_NAME: UNNAMED  # Change to your apk name
   RELEASE_REPO: CHANGE/ME/PLZ  # e.g. shacha086/APKPatcher
+  ASSETS: assets  # This is the folder which to be packed
 
 jobs:
   check:
@@ -58,7 +58,7 @@ jobs:
     - name: Merge assets into apk
       run: |
         cp ./Blueprint.apk ./works/$APK_NAME-unsigned.apk
-        zip -g -0 ./works/$APK_NAME-unsigned.apk assets -r
+        zip -g -0 ./works/$APK_NAME-unsigned.apk $ASSETS -r
 
     - name: Print content in zip
       run: |
