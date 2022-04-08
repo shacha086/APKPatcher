@@ -14,7 +14,7 @@
 * ``ACCESS_TOKEN`` (在[个人通行证](https://github.com/settings/tokens)页面申请，必要的权限是 repo)
 * ``KEYSTORE_B64`` (把你自己的签名证书 base64 处理一下，粘贴进来)
 * ``KEYSTORE_PASS`` (签名密码)
-* ``KEYSTORE_B64`` (签名的别名的密码)
+* ``ALIAS_PASS`` (签名的别名的密码)
 4. 新开一个私人仓库，里面存放需要打包进apk的资源信息。
 5. 将本仓库的``Blueprint``蓝图apk替换成自己的。
 6. 将此库``clone``到本地后，在此仓库新建一个``submodule``连接刚刚创建的数据仓库，需要注意的是连接到此仓库的模块文件夹名称为打包后在 apk 内的名称。
