@@ -1,0 +1,4 @@
+[submodule "APKPatcher"]
+	path = assets
+	url = https://github.com/shacha086/APKPatcher.git
+	branch = assets
