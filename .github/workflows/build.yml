@@ -1,0 +1,107 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  repository_dispatch:
+
+
+env:
+  APK_NAME: UNNAMED  # Change to your apk name
+  RELEASE_REPO: CHANGE/ME/PLZ  # e.g. shacha086/APKPatcher
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.valid.outputs.status }}
+    steps:
+    - name: Check push valid
+      id: valid
+      if: contains( github.event.commits[0].message, 'Commit from GitHub Actions' ) == true
+      run: |
+        echo "::set-output name=status::skipped"
+    
+    
+  build:
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ needs.check.outputs.status != 'skipped' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.ACCESS_TOKEN }}
+        submodules: 'recursive'
+
+    - name: Set up Apksigner
+      run: |
+        sudo apt update
+        sudo apt install apksigner -y
+        
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with: 
+        python-version: 3.9
+        
+    - name: Set up workspace
+      run: |
+        mkdir ./works
+    
+    - name: Update submodules
+      run: |
+        git submodule foreach git submodule sync --recursive
+        git submodule foreach git submodule update --recursive --remote
+      
+    - name: Merge assets into apk
+      run: |
+        cp ./Blueprint.apk ./works/$APK_NAME-unsigned.apk
+        zip -g -0 ./works/$APK_NAME-unsigned.apk assets -r
+
+    - name: Print content in zip
+      run: |
+        cd ./works
+        unzip -l ./$APK_NAME-unsigned.apk
+
+    - name: Get sign key
+      run: |
+        cd ./works
+        echo -n "${{ secrets.KEYSTORE_B64 }}" | base64 --decode > $APK_NAME.jks
+        
+    - name: Sign apk
+      env:
+        KEYSTORE_NAME: ./$APK_NAME.jks
+        KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+        ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+        INPUT: ./$APK_NAME-unsigned.apk
+        OUTPUT: ./$APK_NAME.apk
+      run: |
+        cd ./works
+        rm -f ./sign.sh
+        echo -e "#"\!"/bin/bash""\napksigner sign  --ks $KEYSTORE_NAME --in $INPUT --out $OUTPUT <<EOF\n$KEYSTORE_PASS\n$ALIAS_PASS\nEOF" >> sign.sh
+        chmod +x sign.sh
+        ./sign.sh
+        
+    - name: Get version and update version
+      run: |
+        python ./updateVersion.py
+        
+    - name: Release
+      uses: Hs1r1us/Release-AIO@v1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      with:
+        tag_name: v${{ env.VERSION }}
+        release_name: $APK_NAME v${{ env.VERSION }}
+        body: ${{ github.event.commits[0].message }}
+        asset_files: ./works/$APK_NAME.apk
+        repo: $RELEASE_REPO
+
+    - name: Clean up
+      run: |
+        rm -r ./works/*
+        
+    - name: Add & Commit
+      uses: EndBug/add-and-commit@v9.0.0
